@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+
+  attempts  Attempt[]
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  quizzes     Quiz[]
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+}
+
+model Quiz {
+  id              Int        @id @default(autoincrement())
+  title           String
+  description     String?
+  categoryId      Int
+  category        Category   @relation(fields: [categoryId], references: [id])
+  difficulty      Difficulty
+  duration        Int        // in minutes
+  passingScore    Int        // percentage, e.g. 60
+  maxAttempts     Int        @default(1)
+  status          QuizStatus @default(DRAFT)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  questions       Question[]
+  attempts        Attempt[]
+}
+
+model Question {
+  id           Int        @id @default(autoincrement())
+  quizId       Int
+  quiz         Quiz       @relation(fields: [quizId], references: [id])
+  questionText String
+  marks        Int        @default(1)
+  explanation  String?
+  difficulty   Difficulty @default(MEDIUM)
+  createdAt    DateTime   @default(now())
+
+  options      Option[]
+  answers      Answer[]
+}
+
+model Option {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id])
+  optionText String
+  isCorrect  Boolean  @default(false)
+
+  answers    Answer[]
+}
+
+model Attempt {
+  id               Int       @id @default(autoincrement())
+  quizId           Int
+  quiz             Quiz      @relation(fields: [quizId], references: [id])
+  userId           Int
+  user             User      @relation(fields: [userId], references: [id])
+  score            Int       @default(0)
+  percentage       Float     @default(0)
+  correctAnswers   Int       @default(0)
+  incorrectAnswers Int       @default(0)
+  unanswered       Int       @default(0)
+  timeTaken        Int?      // in seconds
+  status           String    @default("IN_PROGRESS") // IN_PROGRESS, PASSED, FAILED
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  answers          Answer[]
+}
+
+model Answer {
+  id               Int      @id @default(autoincrement())
+  attemptId        Int
+  attempt          Attempt  @relation(fields: [attemptId], references: [id])
+  questionId       Int
+  question         Question @relation(fields: [questionId], references: [id])
+  selectedOptionId Int?
+  selectedOption   Option?  @relation(fields: [selectedOptionId], references: [id])
+  isCorrect        Boolean  @default(false)
+}
