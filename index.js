@@ -6,6 +6,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import quizRoutes from './routes/quizRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import questionRoutes from './routes/questionRoutes.js';
+import studentQuizRoutes from './routes/studentQuizRoutes.js';
+import attemptRoutes from './routes/attemptRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +24,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/questions', questionRoutes);
+app.use('/api/student-quizzes', studentQuizRoutes);
+app.use('/api/attempts', attemptRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
