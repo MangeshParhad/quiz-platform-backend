@@ -75,6 +75,7 @@ export async function updateQuestion(req, res) {
 export async function deleteQuestion(req, res) {
   try {
     const { id } = req.params;
+    await prisma.answer.deleteMany({ where: { questionId: Number(id) } });
     await prisma.option.deleteMany({ where: { questionId: Number(id) } });
     await prisma.question.delete({ where: { id: Number(id) } });
     res.json({ message: 'Question deleted successfully.' });
