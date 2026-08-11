@@ -190,3 +190,108 @@ export async function submitQuiz(req, res) {
     res.status(500).json({ error: 'Failed to submit quiz.' });
   }
 }
+
+export async function getAttemptResult(req, res) {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user.id;
+
+    const attempt = await prisma.attempt.findUnique({
+      where: { id: Number(attemptId) },
+      include: { quiz: true },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      return res.status(404).json({ error: 'Attempt not found.' });
+    }
+
+    if (attempt.status === 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'This attempt has not been submitted yet.' });
+    }
+
+    res.json({
+      attemptId: attempt.id,
+      quizTitle: attempt.quiz.title,
+      totalQuestions: attempt.correctAnswers + attempt.incorrectAnswers + attempt.unanswered,
+      correctAnswers: attempt.correctAnswers,
+      incorrectAnswers: attempt.incorrectAnswers,
+      unanswered: attempt.unanswered,
+      score: attempt.score,
+      percentage: attempt.percentage,
+      status: attempt.status,
+      timeTaken: attempt.timeTaken,
+      completedAt: attempt.completedAt,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch result.' });
+  }
+}
+
+export async function getAttemptReview(req, res) {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user.id;
+
+    const attempt = await prisma.attempt.findUnique({ where: { id: Number(attemptId) } });
+
+    if (!attempt || attempt.userId !== userId) {
+      return res.status(404).json({ error: 'Attempt not found.' });
+    }
+
+    if (attempt.status === 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'This attempt has not been submitted yet.' });
+    }
+
+    const answers = await prisma.answer.findMany({
+      where: { attemptId: attempt.id },
+      include: {
+        question: {
+          include: { options: true },
+        },
+        selectedOption: true,
+      },
+    });
+
+    const review = answers.map((answer) => {
+      const correctOption = answer.question.options.find((opt) => opt.isCorrect);
+      return {
+        questionText: answer.question.questionText,
+        explanation: answer.question.explanation,
+        selectedAnswer: answer.selectedOption?.optionText || null,
+        correctAnswer: correctOption?.optionText,
+        isCorrect: answer.isCorrect,
+      };
+    });
+
+    res.json(review);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch review.' });
+  }
+}
+
+export async function getMyAttempts(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const attempts = await prisma.attempt.findMany({
+      where: { userId, status: { not: 'IN_PROGRESS' } },
+      include: { quiz: { select: { title: true } } },
+      orderBy: { completedAt: 'desc' },
+    });
+
+    res.json(
+      attempts.map((a) => ({
+        attemptId: a.id,
+        quizTitle: a.quiz.title,
+        percentage: a.percentage,
+        status: a.status,
+        completedAt: a.completedAt,
+      }))
+    );
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch attempt history.' });
+  }
+}
