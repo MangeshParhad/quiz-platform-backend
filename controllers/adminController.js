@@ -82,6 +82,45 @@ export async function updateStudentStatus(req, res) {
   }
 }
 
+export async function updateStudent(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+    const student = await prisma.user.update({ where: { id: Number(id) }, data: { name, email } });
+    res.json({ id: student.id, name: student.name, email: student.email });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update student.' });
+  }
+}
+
+export async function resetStudentPassword(req, res) {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    const bcrypt = (await import('bcrypt')).default;
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: Number(id) }, data: { password: hashed } });
+    res.json({ message: 'Password reset successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reset password.' });
+  }
+}
+
+export async function deleteStudent(req, res) {
+  try {
+    const { id } = req.params;
+    await prisma.answer.deleteMany({ where: { attempt: { userId: Number(id) } } });
+    await prisma.attempt.deleteMany({ where: { userId: Number(id) } });
+    await prisma.user.delete({ where: { id: Number(id) } });
+    res.json({ message: 'Student deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete student.' });
+  }
+}
+
 export async function getAnalytics(req, res) {
   try {
     // Pass/fail ratio
